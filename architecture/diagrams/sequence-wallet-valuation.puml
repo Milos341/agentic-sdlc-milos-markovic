@@ -1,0 +1,37 @@
+@startuml sequence-wallet-valuation
+!include <C4/C4_Sequence>
+
+title Wallet valuation in a chosen currency
+
+Person(investor, "Investor", "Views and manages wallet value in a chosen currency")
+Container(api_gateway, "Wallet HTTP API", "Amazon API Gateway HTTP API", "Routes investor requests to wallet functions")
+Component(api_handler, "Wallet API Handler", "AWS Lambda handler, Python 3.12", "Parses requests and maps responses")
+Component(wallet_app, "Wallet Application Service", "Python 3.12", "Orchestrates valuation use case")
+Component(valuation_service, "Valuation Domain Service", "Python 3.12", "Computes wallet value using domain rules")
+Component(wallet_repo, "DynamoDB Wallet Repository", "Python 3.12, boto3", "DynamoDB adapter for wallet persistence")
+Component(rate_adapter, "Exchange Rate Provider Adapter", "Python 3.12, HTTP client", "External rate provider adapter")
+ContainerDb(wallet_table, "Wallet Table", "Amazon DynamoDB", "Stores wallets and their stock entries")
+System_Ext(rate_provider, "Exchange Rate Provider", "External service that provides exchange rates")
+
+Rel(investor, api_gateway, "Requests wallet valuation in target currency", "HTTPS/JSON")
+Rel(api_gateway, api_handler, "Invokes valuation request", "Lambda proxy integration")
+Rel(api_handler, wallet_app, "Calls calculate wallet value use case", "Python function call")
+Rel(wallet_app, wallet_repo, "Loads wallet by identifier", "Python function call")
+Rel(wallet_repo, wallet_table, "Reads wallet items", "DynamoDB API over HTTPS")
+Rel(wallet_table, wallet_repo, "Returns wallet items", "DynamoDB API over HTTPS")
+Rel(wallet_repo, wallet_app, "Returns wallet aggregate", "Python function call")
+Rel(wallet_app, valuation_service, "Requests valuation in target currency", "Python function call")
+
+loop For each stock type requiring conversion
+    Rel(valuation_service, rate_adapter, "Requests exchange rate", "Python function call")
+    Rel(rate_adapter, rate_provider, "Requests exchange rate", "HTTPS/REST")
+    Rel(rate_provider, rate_adapter, "Returns exchange rate", "HTTPS/REST")
+    Rel(rate_adapter, valuation_service, "Returns normalized rate", "Python function call")
+end
+
+Rel(valuation_service, wallet_app, "Returns total valuation result", "Python function call")
+Rel(wallet_app, api_handler, "Returns use case result", "Python function call")
+Rel(api_handler, api_gateway, "Returns HTTP response", "Lambda proxy integration")
+Rel(api_gateway, investor, "Returns wallet value in target currency", "HTTPS/JSON")
+
+@enduml

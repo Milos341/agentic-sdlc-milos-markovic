@@ -1,0 +1,21 @@
+@startuml c4-container
+!include <C4/C4_Container>
+
+title Container diagram for Wallet Valuation System
+
+Person(investor, "Investor", "Views and manages wallet value in a chosen currency")
+
+System_Boundary(wallet_system, "Wallet Valuation System") {
+    Container(api_gateway, "Wallet HTTP API", "Amazon API Gateway HTTP API", "Routes investor requests to wallet functions and returns HTTP responses")
+    Container(wallet_function, "Wallet Function", "AWS Lambda, Python 3.12", "Handles wallet management and valuation use cases")
+    ContainerDb(wallet_table, "Wallet Table", "Amazon DynamoDB", "Stores wallets and their stock entries")
+}
+
+System_Ext(rate_provider, "Exchange Rate Provider", "External service that provides exchange rates between stock types and currencies")
+
+Rel(investor, api_gateway, "Manages wallet and requests valuation", "HTTPS/JSON")
+Rel(api_gateway, wallet_function, "Invokes wallet operations", "Lambda proxy integration")
+Rel(wallet_function, wallet_table, "Reads and writes wallet data", "DynamoDB API over HTTPS")
+Rel(wallet_function, rate_provider, "Requests exchange rates", "HTTPS/REST")
+
+@enduml
