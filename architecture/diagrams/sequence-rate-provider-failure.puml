@@ -1,0 +1,30 @@
+@startuml sequence-rate-provider-failure
+!include <C4/C4_Sequence>
+
+title Wallet valuation when exchange rate provider fails
+
+Person(investor, "Investor", "Views and manages wallet value in a chosen currency")
+Container(api_gateway, "Wallet HTTP API", "Amazon API Gateway HTTP API", "Routes investor requests to wallet functions")
+Component(api_handler, "Wallet API Handler", "AWS Lambda handler, Python 3.12", "Parses requests and maps responses")
+Component(wallet_app, "Wallet Application Service", "Python 3.12", "Orchestrates valuation use case")
+Component(valuation_service, "Valuation Domain Service", "Python 3.12", "Computes wallet value using domain rules")
+Component(wallet_repo, "DynamoDB Wallet Repository", "Python 3.12, boto3", "DynamoDB adapter for wallet persistence")
+Component(rate_adapter, "Exchange Rate Provider Adapter", "Python 3.12, HTTP client", "External rate provider adapter")
+System_Ext(rate_provider, "Exchange Rate Provider", "External service that provides exchange rates")
+
+Rel(investor, api_gateway, "Requests wallet valuation in target currency", "HTTPS/JSON")
+Rel(api_gateway, api_handler, "Invokes valuation request", "Lambda proxy integration")
+Rel(api_handler, wallet_app, "Calls calculate wallet value use case", "Python function call")
+Rel(wallet_app, wallet_repo, "Loads wallet by identifier", "Python function call")
+Rel(wallet_repo, wallet_app, "Returns wallet aggregate", "Python function call")
+Rel(wallet_app, valuation_service, "Requests valuation in target currency", "Python function call")
+Rel(valuation_service, rate_adapter, "Requests exchange rate", "Python function call")
+Rel(rate_adapter, rate_provider, "Requests exchange rate", "HTTPS/REST")
+Rel(rate_provider, rate_adapter, "Returns error or times out", "HTTPS/REST")
+Rel(rate_adapter, valuation_service, "Raises mapped rate provider error", "Python function call")
+Rel(valuation_service, wallet_app, "Propagates valuation failure", "Python function call")
+Rel(wallet_app, api_handler, "Returns explicit valuation error", "Python function call")
+Rel(api_handler, api_gateway, "Returns error HTTP response, no partial valuation", "Lambda proxy integration")
+Rel(api_gateway, investor, "Returns clear valuation unavailable error", "HTTPS/JSON")
+
+@enduml

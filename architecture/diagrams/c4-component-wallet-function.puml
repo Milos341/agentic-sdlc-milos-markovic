@@ -1,0 +1,31 @@
+@startuml c4-component-wallet-function
+!include <C4/C4_Component>
+
+title Component diagram for Wallet Function
+
+Container(api_gateway, "Wallet HTTP API", "Amazon API Gateway HTTP API", "Routes investor requests to wallet functions")
+
+Container_Boundary(wallet_function, "Wallet Function") {
+    Component(api_handler, "Wallet API Handler", "AWS Lambda handler, Python 3.12", "Parses API Gateway events, validates requests, and maps use case results to HTTP responses")
+    Component(wallet_app, "Wallet Application Service", "Python 3.12", "Orchestrates wallet management and valuation use cases")
+    Component(valuation_service, "Valuation Domain Service", "Python 3.12", "Applies domain rules to compute wallet value in a target currency")
+    Component(wallet_repo_port, "WalletRepository Port", "Python 3.12 interface", "Domain-owned interface for loading and saving wallets")
+    Component(rate_provider_port, "RateProvider Port", "Python 3.12 interface", "Domain-owned interface for obtaining exchange rates")
+    Component(wallet_repo, "DynamoDB Wallet Repository", "Python 3.12, boto3", "Loads and stores wallet aggregates in DynamoDB through the wallet repository port")
+    Component(rate_adapter, "Exchange Rate Provider Adapter", "Python 3.12, HTTP client", "Fetches exchange rates from the external provider through the rate provider port")
+}
+
+ContainerDb(wallet_table, "Wallet Table", "Amazon DynamoDB", "Stores wallets and their stock entries")
+System_Ext(rate_provider, "Exchange Rate Provider", "External service that provides exchange rates between stock types and currencies")
+
+Rel(api_gateway, api_handler, "Invokes with HTTP request event", "Lambda proxy integration")
+Rel(api_handler, wallet_app, "Calls wallet use case", "Python function call")
+Rel(wallet_app, valuation_service, "Requests wallet valuation", "Python function call")
+Rel(wallet_app, wallet_repo_port, "Loads and saves wallet", "Python function call")
+Rel(valuation_service, rate_provider_port, "Requests exchange rate", "Python function call")
+Rel(wallet_repo, wallet_repo_port, "Implements", "Python protocol/ABC")
+Rel(rate_adapter, rate_provider_port, "Implements", "Python protocol/ABC")
+Rel(wallet_repo, wallet_table, "Reads and writes wallet items", "DynamoDB API over HTTPS")
+Rel(rate_adapter, rate_provider, "Requests exchange rates", "HTTPS/REST")
+
+@enduml

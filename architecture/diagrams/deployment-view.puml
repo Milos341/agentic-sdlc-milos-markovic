@@ -1,0 +1,35 @@
+@startuml deployment-view
+!include <C4/C4_Deployment>
+
+title Deployment diagram for Wallet Valuation System
+
+Deployment_Node(aws, "Amazon Web Services", "Cloud platform") {
+    Deployment_Node(region, "AWS Region", "e.g. eu-central-1") {
+        Deployment_Node(apigw_node, "Amazon API Gateway", "Managed HTTP API service") {
+            Container(api_gateway, "Wallet HTTP API", "Amazon API Gateway HTTP API", "Receives investor HTTPS requests and routes them to Lambda")
+        }
+
+        Deployment_Node(lambda_node, "AWS Lambda", "Managed serverless compute") {
+            Container(wallet_function, "Wallet Function", "AWS Lambda, Python 3.12", "Runs wallet management and valuation use cases")
+        }
+
+        Deployment_Node(dynamodb_node, "Amazon DynamoDB", "Managed NoSQL database service") {
+            ContainerDb(wallet_table, "Wallet Table", "Amazon DynamoDB, on-demand", "Stores wallets and stock entries")
+        }
+    }
+}
+
+Deployment_Node(external, "External Provider Infrastructure", "Third-party environment") {
+    System_Ext(rate_provider, "Exchange Rate Provider", "External service that provides exchange rates between stock types and currencies")
+}
+
+Deployment_Node(client, "Investor Device", "Browser / API client") {
+    Person(investor, "Investor", "Views and manages wallet value in a chosen currency")
+}
+
+Rel(investor, api_gateway, "Manages wallet and requests valuation", "HTTPS/JSON")
+Rel(api_gateway, wallet_function, "Invokes wallet operations", "Lambda proxy integration")
+Rel(wallet_function, wallet_table, "Reads and writes wallet data", "DynamoDB API over HTTPS")
+Rel(wallet_function, rate_provider, "Requests exchange rates", "HTTPS/REST")
+
+@enduml

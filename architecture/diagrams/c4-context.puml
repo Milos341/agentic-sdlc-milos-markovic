@@ -1,0 +1,15 @@
+@startuml c4-context
+!include <C4/C4_Context>
+skinparam backgroundColor white
+skinparam backgroundColor white
+
+title System Context diagram for Wallet Valuation System
+
+Person(investor, "Investor", "Views the value of their wallet in a chosen currency")
+System(wallet, "Wallet Valuation System", "Stores wallets of stocks and computes their total value in a chosen currency")
+System_Ext(rates, "Exchange Rate Provider", "External service that provides exchange rates between stock types and currencies")
+
+Rel(investor, wallet, "Manages wallet and requests valuation", "HTTPS")
+Rel(wallet, rates, "Requests exchange rates", "HTTPS/REST")
+
+@enduml
