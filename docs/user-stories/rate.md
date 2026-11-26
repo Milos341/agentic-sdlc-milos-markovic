@@ -156,61 +156,71 @@ Not applicable. The user interface is out of scope (Chapter 1, scope notes; Chap
 
 ### Infrastructure sub-stories
 
-#### RATE-INFRA-001.1: Deploy the function with external rate provider integration
+#### RATE-INFRA-001.1: The Dockerfile builds successfully
 
 **Parent:** RATE-STORY-001
-**Architecture references:** Chapter 7, sections 7.2 and 7.3 (Configuration, Security boundaries); ADR-001; TC-4; TC-5; TC-6
+**Architecture references:** Chapter 7, sections 7.2 and 7.3; ADR-001; TC-4; TC-5; TC-6; `Dockerfile`; `.github/workflows/ci.yml`. The AWS serverless deployment (Chapter 7, ADR-001) remains the documented target architecture, but it is out of scope for the INFRA stories of this exercise.
 
-##### RATE-INFRA-001.1-S1: Provider connectivity comes from deployment configuration
+##### RATE-INFRA-001.1-S1: Docker image builds
 
 **GIVEN**
-* The AWS SAM template defines the Wallet Function with rate provider endpoint and timeout settings as environment configuration
+* The repository contains a `Dockerfile` based on `python:3.12-slim` and a valid `requirements.txt`
 
 **WHEN**
-* A developer runs `sam build` and `sam deploy`
+* A developer runs `docker build -t kata-tests .`
 
 **THEN**
-* The function can call the configured rate provider over HTTPS/REST
-* Outbound provider traffic uses HTTPS
-* No provider credentials or API keys are embedded in the deployed function code
+* The command exits with code 0
+* A Docker image tagged `kata-tests` is produced
 
-#### RATE-INFRA-001.2: Data store for the wallet being valued
+#### RATE-INFRA-001.2: The test suite runs inside the Docker container
 
 **Parent:** RATE-STORY-001
-**Architecture references:** Chapter 7, section 7.2 (Wallet Table); Chapter 8, section 8.5 (Persistence); TC-3; TD-2
+**Architecture references:** Chapter 7, section 7.3; ADR-001; TC-4; `Dockerfile`; `.github/workflows/ci.yml`. The AWS serverless deployment (Chapter 7, ADR-001) remains the documented target architecture, but it is out of scope for the INFRA stories of this exercise.
 
-##### RATE-INFRA-001.2-S1: Wallet data is read from the DynamoDB table
+##### RATE-INFRA-001.2-S1: Pytest executes in the container
 
 **GIVEN**
-* The AWS SAM template provisions the Wallet Table with on-demand billing
-* The AWS SDK is mocked in the adapter test
+* The `kata-tests` Docker image has been built successfully
 
 **WHEN**
-* A valuation that needs an external rate loads a wallet through the DynamoDB Wallet Repository
+* A developer runs `docker run --rm kata-tests`
 
 **THEN**
-* The repository reads the wallet aggregate from the Wallet Table through the DynamoDB API over HTTPS
-* The wallet data used in the valuation comes from that table
-* No provisioned database capacity needs to be managed
+* The command exits with code 0
+* Pytest runs the tests under `tests/` and reports all tests passed
 
-#### RATE-INFRA-001.3: Event handling
-
-Not applicable. Rate lookup is a synchronous HTTPS/REST request/response integration (Chapter 4, section 4.2; Chapter 3, section 3.2, I-2; Chapter 6, section 6.1, runtime steps 7-9). No events, queues or dead-letter handling are part of this flow.
-
-#### RATE-INFRA-001.4: Monitoring and observability of provider calls
+#### RATE-INFRA-001.3: Dependencies are installed correctly
 
 **Parent:** RATE-STORY-001
-**Architecture references:** Chapter 7, section 7.3 (Observability); Chapter 8, section 8.7 (Logging, Observability, and Diagnostics); R-1; R-4
+**Architecture references:** Chapter 7, section 7.3; ADR-001; TC-4; `Dockerfile`; `requirements.txt`. The AWS serverless deployment (Chapter 7, ADR-001) remains the documented target architecture, but it is out of scope for the INFRA stories of this exercise.
 
-##### RATE-INFRA-001.4-S1: Rate lookups are observable
+##### RATE-INFRA-001.3-S1: Requirements are installed during image build
 
 **GIVEN**
-* The stack is deployed
+* `requirements.txt` declares the project test dependencies (including `pytest>=8.0`)
 
 **WHEN**
-* The adapter performs a rate lookup during a valuation
+* A developer runs `docker build -t kata-tests .`
 
 **THEN**
-* The lookup context and outcome are logged to CloudWatch Logs as structured fields
-* Lambda duration metrics are available to observe provider-call latency
-* The logs exclude provider credentials and full provider payloads
+* The build step `pip install --no-cache-dir -r requirements.txt` completes with exit code 0
+* The resulting image contains the installed dependencies required to run `pytest`
+
+#### RATE-INFRA-001.4: The project structure supports pytest discovery
+
+**Parent:** RATE-STORY-001
+**Architecture references:** Chapter 7, section 7.3; ADR-001; TC-4; `Dockerfile`; `tests/`. The AWS serverless deployment (Chapter 7, ADR-001) remains the documented target architecture, but it is out of scope for the INFRA stories of this exercise.
+
+##### RATE-INFRA-001.4-S1: Pytest discovers tests from the tests directory
+
+**GIVEN**
+* The source code is copied to `/app/src` and the tests are copied to `/app/tests` in the Docker image
+* The container default command is `pytest tests/ -v --tb=short`
+
+**WHEN**
+* A developer runs `docker run --rm kata-tests`
+
+**THEN**
+* Pytest collects tests from the `tests/` directory without import or discovery errors
+* The command exits with code 0 when all discovered tests pass

@@ -192,62 +192,71 @@ Not applicable. The user interface is out of scope (Chapter 1, scope notes; Chap
 
 ### Infrastructure sub-stories
 
-#### VALUATION-INFRA-001.1: Deploy the valuation route and the Wallet Function
+#### VALUATION-INFRA-001.1: The Dockerfile builds successfully
 
 **Parent:** VALUATION-STORY-001
-**Architecture references:** Chapter 7, sections 7.2 and 7.3; ADR-001; ADR-003; TC-4
+**Architecture references:** Chapter 7, sections 7.2 and 7.3; ADR-001; ADR-003; TC-4; `Dockerfile`; `.github/workflows/ci.yml`. The AWS serverless deployment (Chapter 7, ADR-001) remains the documented target architecture, but it is out of scope for the INFRA stories of this exercise.
 
-##### VALUATION-INFRA-001.1-S1: Deployment with SAM
+##### VALUATION-INFRA-001.1-S1: Docker image builds
 
 **GIVEN**
-* The AWS SAM template defines an HTTP API route for valuation integrated with the Wallet Function
+* The repository contains a `Dockerfile` based on `python:3.12-slim` and a valid `requirements.txt`
 
 **WHEN**
-* A developer runs `sam build` and `sam deploy`
+* A developer runs `docker build -t kata-tests .`
 
 **THEN**
-* The valuation endpoint is reachable over HTTPS
-* The Wallet Function runs on Python 3.12
-* The function's environment configuration supplies the Wallet Table name and the rate provider endpoint/settings
-* The function's execution role has least-privilege access to the Wallet Table only
+* The command exits with code 0
+* A Docker image tagged `kata-tests` is produced
 
-#### VALUATION-INFRA-001.2: Data store for wallet reads during valuation
+#### VALUATION-INFRA-001.2: The test suite runs inside the Docker container
 
 **Parent:** VALUATION-STORY-001
-**Architecture references:** Chapter 7, section 7.2 (Wallet Table); Chapter 8, section 8.5 (Persistence); TC-3; TD-2
+**Architecture references:** Chapter 7, section 7.3; ADR-001; TC-4; `Dockerfile`; `.github/workflows/ci.yml`. The AWS serverless deployment (Chapter 7, ADR-001) remains the documented target architecture, but it is out of scope for the INFRA stories of this exercise.
 
-##### VALUATION-INFRA-001.2-S1: Wallet aggregate is read from the Wallet Table
+##### VALUATION-INFRA-001.2-S1: Pytest executes in the container
 
 **GIVEN**
-* The AWS SAM template provisions the Wallet Table with on-demand billing
-* The AWS SDK is mocked in the adapter test
+* The `kata-tests` Docker image has been built successfully
 
 **WHEN**
-* A valuation request loads a wallet through the DynamoDB Wallet Repository
+* A developer runs `docker run --rm kata-tests`
 
 **THEN**
-* The repository reads the wallet items from the Wallet Table through the DynamoDB API over HTTPS
-* The loaded wallet contains the stocks to be valued
-* No provisioned database capacity needs to be managed
+* The command exits with code 0
+* Pytest runs the tests under `tests/` and reports all tests passed
 
-#### VALUATION-INFRA-001.3: Event handling
-
-Not applicable. The valuation flow is synchronous request and response (Chapter 4, section 4.2; Chapter 6, section 6.1). The outbound exchange-rate call is a synchronous HTTPS/REST integration, not an event (Chapter 5, section 5.1).
-
-#### VALUATION-INFRA-001.4: Monitoring and observability
+#### VALUATION-INFRA-001.3: Dependencies are installed correctly
 
 **Parent:** VALUATION-STORY-001
-**Architecture references:** Chapter 7, section 7.3 (Observability); Chapter 8, section 8.7 (Logging, Observability, and Diagnostics)
+**Architecture references:** Chapter 7, section 7.3; ADR-001; TC-4; `Dockerfile`; `requirements.txt`. The AWS serverless deployment (Chapter 7, ADR-001) remains the documented target architecture, but it is out of scope for the INFRA stories of this exercise.
 
-##### VALUATION-INFRA-001.4-S1: Logs and metrics are available for valuation requests
+##### VALUATION-INFRA-001.3-S1: Requirements are installed during image build
 
 **GIVEN**
-* The stack is deployed
+* `requirements.txt` declares the project test dependencies (including `pytest>=8.0`)
 
 **WHEN**
-* A valuation request is processed
+* A developer runs `docker build -t kata-tests .`
 
 **THEN**
-* The Lambda invocation is logged to CloudWatch Logs with structured fields including the use case name and a request correlation identifier where available
-* API Gateway and Lambda metrics (requests, errors, duration) are available
-* The logs contain no secrets or credentials
+* The build step `pip install --no-cache-dir -r requirements.txt` completes with exit code 0
+* The resulting image contains the installed dependencies required to run `pytest`
+
+#### VALUATION-INFRA-001.4: The project structure supports pytest discovery
+
+**Parent:** VALUATION-STORY-001
+**Architecture references:** Chapter 7, section 7.3; ADR-001; TC-4; `Dockerfile`; `tests/`. The AWS serverless deployment (Chapter 7, ADR-001) remains the documented target architecture, but it is out of scope for the INFRA stories of this exercise.
+
+##### VALUATION-INFRA-001.4-S1: Pytest discovers tests from the tests directory
+
+**GIVEN**
+* The source code is copied to `/app/src` and the tests are copied to `/app/tests` in the Docker image
+* The container default command is `pytest tests/ -v --tb=short`
+
+**WHEN**
+* A developer runs `docker run --rm kata-tests`
+
+**THEN**
+* Pytest collects tests from the `tests/` directory without import or discovery errors
+* The command exits with code 0 when all discovered tests pass
