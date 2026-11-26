@@ -1,7 +1,7 @@
 """Tests for VALUATION-STORY-001, backend sub-stories BE-001.2 and BE-001.3."""
 
 from wallet.domain import Stock, Wallet
-from wallet.use_cases import CalculateWalletValueUseCase
+from wallet.use_cases import CalculateWalletValueUseCase, WalletNotFound
 from wallet.valuation import ValuationService
 
 
@@ -39,7 +39,7 @@ class FakeWalletRepository:
 
     def load(self, wallet_id):
         self.loaded_ids.append(wallet_id)
-        return self._wallets[wallet_id]
+        return self._wallets.get(wallet_id)
 
 
 class RecordingValuationService:
@@ -73,3 +73,20 @@ def test_valuation_be_001_2_s1_wallet_is_loaded_and_valued_in_requested_currency
     # AND the result contains the total 206 and the currency USD
     assert result.total == 206
     assert result.currency == "USD"
+
+
+def test_valuation_be_001_2_s3_no_valuation_is_attempted_for_a_missing_wallet():
+    # GIVEN a fake WalletRepository holds no wallet with the requested identifier
+    repository = FakeWalletRepository({})
+    rates = FakeRateProvider({("bitcoin", "USD"): 100})
+    valuation_service = RecordingValuationService(rates)
+    use_case = CalculateWalletValueUseCase(repository, valuation_service)
+
+    # WHEN the use case calculates the wallet value in USD
+    result = use_case.calculate("missing-wallet", "USD")
+
+    # THEN a not-found use case result is returned for that identifier
+    assert isinstance(result, WalletNotFound)
+    assert result.wallet_id == "missing-wallet"
+    # AND the Valuation Domain Service is not called
+    assert valuation_service.calls == []
