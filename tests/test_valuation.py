@@ -90,3 +90,22 @@ def test_valuation_be_001_2_s3_no_valuation_is_attempted_for_a_missing_wallet():
     assert result.wallet_id == "missing-wallet"
     # AND the Valuation Domain Service is not called
     assert valuation_service.calls == []
+
+
+def test_valuation_be_001_2_s2_target_currency_is_passed_through_unchanged():
+    # GIVEN a fake WalletRepository holds a wallet with 2 bitcoin and 3 petroleum
+    wallet = Wallet([Stock(2, "bitcoin"), Stock(3, "petroleum")])
+    repository = FakeWalletRepository({"wallet-1": wallet})
+    # AND a fake RateProvider returns 90 EUR per bitcoin and 2 EUR per petroleum
+    rates = FakeRateProvider({("bitcoin", "EUR"): 90, ("petroleum", "EUR"): 2})
+    valuation_service = RecordingValuationService(rates)
+    use_case = CalculateWalletValueUseCase(repository, valuation_service)
+
+    # WHEN the use case calculates the wallet value in EUR
+    result = use_case.calculate("wallet-1", "EUR")
+
+    # THEN the Valuation Domain Service is called with target currency EUR
+    assert valuation_service.calls == [(wallet, "EUR")]
+    # AND the result contains the total 186 and the currency EUR
+    assert result.total == 186
+    assert result.currency == "EUR"
