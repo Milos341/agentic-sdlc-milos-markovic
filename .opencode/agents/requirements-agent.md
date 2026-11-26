@@ -127,13 +127,24 @@ sub-stories and state why (never invent a UI).
 
 ## INFRA Story Requirements
 
-Every story has INFRA sub-stories, adapted to the serverless architecture of
-Chapter 7 (AWS SAM, API Gateway, Lambda, DynamoDB, CloudWatch):
-- Deployment of the API and the function
-- Data store (the DynamoDB table)
-- Event handling, or "Not applicable" with the reason (the system is synchronous, Chapter 4)
-- Monitoring and observability (CloudWatch logs and metrics)
-A scenario is still needed for each INFRA sub-story that applies.
+The kata runs locally in Docker, not on AWS. INFRA sub-stories describe the
+Docker-based build and test environment (Dockerfile and the GitHub Actions CI
+workflow from the CI/CD module), not SAM, Lambda, DynamoDB or CloudWatch.
+The deployment target is "docker build" followed by "docker run"; the tests are
+executed inside the container with pytest.
+
+Every story has exactly these four INFRA sub-stories, each with at least one scenario:
+- {DOMAIN}-INFRA-{N}.1: The Dockerfile builds successfully
+- {DOMAIN}-INFRA-{N}.2: The test suite runs inside the Docker container
+- {DOMAIN}-INFRA-{N}.3: Dependencies are installed correctly
+- {DOMAIN}-INFRA-{N}.4: The project structure supports pytest discovery
+
+The AWS serverless deployment (Chapter 7, ADR-001) stays the documented target
+architecture, but it is out of scope for the INFRA stories of this exercise.
+Mention this in one sentence in each INFRA sub-story's architecture references.
+Verifiable assertions are commands and their outcomes, for example
+"docker build -t kata-tests ." exits with code 0 and "docker run --rm kata-tests"
+reports all tests passed.
 
 ## Architecture Reference Rules
 

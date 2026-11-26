@@ -8,5 +8,5 @@ In this course I build a software factory: a set of AI agents that automate the 
 - [x] Module 2: Software Architecture — arc42 design agent
 - [x] Module 3: Software Requirements — user story derivation agent
 - [x] Module 4: CI/CD — deployment pipeline agent
-- [ ] Module 5: TDD/BDD — multi-agent test system
+- [x] Module 5: TDD/BDD — multi-agent test system
 - [ ] Module 6: Final Project — individual kata using all agents

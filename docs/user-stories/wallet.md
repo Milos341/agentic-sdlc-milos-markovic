@@ -141,58 +141,71 @@ Not applicable. The user interface is out of scope (Chapter 1, scope notes; Chap
 
 ### Infrastructure sub-stories
 
-#### WALLET-INFRA-001.1: Deploy the API and the Wallet Function
+#### WALLET-INFRA-001.1: The Dockerfile builds successfully
 
 **Parent:** WALLET-STORY-001
-**Architecture references:** Chapter 7, sections 7.2 and 7.3; ADR-001; TC-4
+**Architecture references:** Chapter 7, sections 7.2 and 7.3; ADR-001; TC-4; `Dockerfile`; `.github/workflows/ci.yml`. The AWS serverless deployment (Chapter 7, ADR-001) remains the documented target architecture, but it is out of scope for the INFRA stories of this exercise.
 
-##### WALLET-INFRA-001.1-S1: Deployment with SAM
+##### WALLET-INFRA-001.1-S1: Docker image builds
 
 **GIVEN**
-* The AWS SAM template defines the HTTP API and the Wallet Function
+* The repository contains a `Dockerfile` based on `python:3.12-slim` and a valid `requirements.txt`
 
 **WHEN**
-* A developer runs `sam build` and `sam deploy`
+* A developer runs `docker build -t kata-tests .`
 
 **THEN**
-* The API endpoint is reachable over HTTPS
-* The Wallet Function runs on Python 3.12
-* The function's execution role can access the Wallet Table only
+* The command exits with code 0
+* A Docker image tagged `kata-tests` is produced
 
-#### WALLET-INFRA-001.2: Create the Wallet Table
+#### WALLET-INFRA-001.2: The test suite runs inside the Docker container
 
 **Parent:** WALLET-STORY-001
-**Architecture references:** Chapter 7 (Wallet Table), ADR-001, TC-3, TD-2
+**Architecture references:** Chapter 7, section 7.3; ADR-001; TC-4; `Dockerfile`; `.github/workflows/ci.yml`. The AWS serverless deployment (Chapter 7, ADR-001) remains the documented target architecture, but it is out of scope for the INFRA stories of this exercise.
 
-##### WALLET-INFRA-001.2-S1: Table is provisioned on demand
+##### WALLET-INFRA-001.2-S1: Pytest executes in the container
 
 **GIVEN**
-* The AWS SAM template defines the Wallet Table with on-demand billing
+* The `kata-tests` Docker image has been built successfully
 
 **WHEN**
-* The stack is deployed
+* A developer runs `docker run --rm kata-tests`
 
 **THEN**
-* The Wallet Table exists with on-demand capacity
-* No provisioned capacity needs to be managed
+* The command exits with code 0
+* Pytest runs the tests under `tests/` and reports all tests passed
 
-#### WALLET-INFRA-001.3: Event handling
-
-Not applicable. The system uses synchronous request and response and no events (Chapter 4, section 4.2).
-
-#### WALLET-INFRA-001.4: Monitoring and observability
+#### WALLET-INFRA-001.3: Dependencies are installed correctly
 
 **Parent:** WALLET-STORY-001
-**Architecture references:** Chapter 7, section 7.3; Chapter 8, section 8.7
+**Architecture references:** Chapter 7, section 7.3; ADR-001; TC-4; `Dockerfile`; `requirements.txt`. The AWS serverless deployment (Chapter 7, ADR-001) remains the documented target architecture, but it is out of scope for the INFRA stories of this exercise.
 
-##### WALLET-INFRA-001.4-S1: Logs and metrics are available
+##### WALLET-INFRA-001.3-S1: Requirements are installed during image build
 
 **GIVEN**
-* The stack is deployed
+* `requirements.txt` declares the project test dependencies (including `pytest>=8.0`)
 
 **WHEN**
-* A request to add a stock is processed
+* A developer runs `docker build -t kata-tests .`
 
 **THEN**
-* The Lambda invocation is logged to CloudWatch Logs
-* API Gateway and Lambda metrics (requests, errors, duration) are available
+* The build step `pip install --no-cache-dir -r requirements.txt` completes with exit code 0
+* The resulting image contains the installed dependencies required to run `pytest`
+
+#### WALLET-INFRA-001.4: The project structure supports pytest discovery
+
+**Parent:** WALLET-STORY-001
+**Architecture references:** Chapter 7, section 7.3; ADR-001; TC-4; `Dockerfile`; `tests/`. The AWS serverless deployment (Chapter 7, ADR-001) remains the documented target architecture, but it is out of scope for the INFRA stories of this exercise.
+
+##### WALLET-INFRA-001.4-S1: Pytest discovers tests from the tests directory
+
+**GIVEN**
+* The source code is copied to `/app/src` and the tests are copied to `/app/tests` in the Docker image
+* The container default command is `pytest tests/ -v --tb=short`
+
+**WHEN**
+* A developer runs `docker run --rm kata-tests`
+
+**THEN**
+* Pytest collects tests from the `tests/` directory without import or discovery errors
+* The command exits with code 0 when all discovered tests pass
