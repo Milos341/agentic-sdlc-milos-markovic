@@ -1,6 +1,7 @@
 FROM docker.io/library/python:3.12-slim
 
 WORKDIR /app
+ENV PYTHONPATH=/app/src
 
 # Install dependencies first (cached layer)
 COPY requirements.txt .
